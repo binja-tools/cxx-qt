@@ -92,6 +92,8 @@ pub struct GeneratedCppQObject {
     pub namespace_internals: String,
     /// The blocks of the QObject
     pub blocks: GeneratedCppQObjectBlocks,
+    /// Whether this type has a #[qobject] / Q_OBJECT macro
+    pub has_qobject_macro: bool,
 }
 
 impl GeneratedCppQObject {
@@ -109,6 +111,7 @@ impl GeneratedCppQObject {
             namespace: qobject.namespace.clone(),
             namespace_internals: namespace_idents.internal,
             blocks: GeneratedCppQObjectBlocks::from(qobject),
+            has_qobject_macro: qobject.has_qobject_macro,
         };
 
         // Ensure that we include MaybeLockGuard<T> that is used in multiple places
@@ -118,6 +121,8 @@ impl GeneratedCppQObject {
             .insert("#include <cxx-qt-common/cxxqt_maybelockguard.h>".to_owned());
 
         // Build the base class
+        //
+        // TODO: if there is no qobject macro should we assume the base?
         let base_class = qobject
             .base_class
             .clone()
