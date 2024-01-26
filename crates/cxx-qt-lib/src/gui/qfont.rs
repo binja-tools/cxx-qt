@@ -170,6 +170,10 @@ mod ffi {
         #[rust_name = "set_pixel_size"]
         fn setPixelSize(self: &mut QFont, pixelSize: i32);
 
+        /// Sets the point size to pointSize.
+        #[rust_name = "set_point_size"]
+        fn setPointSize(self: &mut QFont, pointSize: i32);
+
         /// Sets the stretch factor for the font.
         #[rust_name = "set_stretch"]
         fn setStretch(self: &mut QFont, factor: i32);
