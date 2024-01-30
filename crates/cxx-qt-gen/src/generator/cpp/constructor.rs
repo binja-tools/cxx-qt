@@ -20,6 +20,7 @@ fn default_constructor(
 ) -> GeneratedCppQObjectBlocks {
     GeneratedCppQObjectBlocks {
         methods: vec![CppFragment::Pair {
+            // TODO: if there is no qobject macro what do we do with the constructor?
             header: format!(
                 "explicit {class_name}(QObject* parent = nullptr);",
                 class_name = qobject.ident
@@ -144,6 +145,7 @@ mod tests {
             namespace: "".to_string(),
             namespace_internals: "rust".to_string(),
             blocks: GeneratedCppQObjectBlocks::default(),
+            has_qobject_macro: true,
         }
     }
 

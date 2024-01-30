@@ -84,44 +84,37 @@ impl ParsedCxxQtData {
                                     syn::parse2(tokens.clone())?;
 
                                 // Check this type is tagged with a #[qobject]
-                                if attribute_take_path(&mut foreign_alias.attrs, &["qobject"])
-                                    .is_some()
-                                {
-                                    // Load the QObject
-                                    let mut qobject = ParsedQObject::try_from(&foreign_alias)?;
+                                let has_qobject_macro =
+                                    attribute_take_path(&mut foreign_alias.attrs, &["qobject"])
+                                        .is_some();
 
-                                    // Inject the bridge namespace if the qobject one is empty
-                                    if qobject.namespace.is_empty() && !namespace.is_empty() {
-                                        qobject.namespace = namespace.clone();
-                                    }
+                                // Load the QObject
+                                let mut qobject = ParsedQObject::try_from(&foreign_alias)?;
+                                qobject.has_qobject_macro = has_qobject_macro;
 
-                                    // Add the QObject type to the qualified mappings
-                                    self.cxx_mappings.qualified.insert(
-                                        foreign_alias.ident_left.clone(),
-                                        path_from_idents(
-                                            &self.module_ident,
-                                            &foreign_alias.ident_left,
-                                        ),
-                                    );
-
-                                    // Ensure that the namespace of the QObject is in the mappings
-                                    if !qobject.namespace.is_empty() {
-                                        self.cxx_mappings.namespaces.insert(
-                                            foreign_alias.ident_left.to_string(),
-                                            qobject.namespace.clone(),
-                                        );
-                                    }
-
-                                    // Note that we assume a compiler error will occur later
-                                    // if you had two structs with the same name
-                                    self.qobjects
-                                        .insert(foreign_alias.ident_left.clone(), qobject);
-                                } else {
-                                    return Err(Error::new(
-                                        foreign_item.span(),
-                                        "type A = super::B must be tagged with #[qobject]",
-                                    ));
+                                // Inject the bridge namespace if the qobject one is empty
+                                if qobject.namespace.is_empty() && !namespace.is_empty() {
+                                    qobject.namespace = namespace.clone();
                                 }
+
+                                // Add the QObject type to the qualified mappings
+                                self.cxx_mappings.qualified.insert(
+                                    foreign_alias.ident_left.clone(),
+                                    path_from_idents(&self.module_ident, &foreign_alias.ident_left),
+                                );
+
+                                // Ensure that the namespace of the QObject is in the mappings
+                                if !qobject.namespace.is_empty() {
+                                    self.cxx_mappings.namespaces.insert(
+                                        foreign_alias.ident_left.to_string(),
+                                        qobject.namespace.clone(),
+                                    );
+                                }
+
+                                // Note that we assume a compiler error will occur later
+                                // if you had two structs with the same name
+                                self.qobjects
+                                    .insert(foreign_alias.ident_left.clone(), qobject);
                             }
                             // Const Macro, Type are unsupported in extern "RustQt" for now
                             _others => {
@@ -400,6 +393,13 @@ mod tests {
         assert!(result.is_ok());
         assert_eq!(cxx_qt_data.qobjects.len(), 1);
         assert!(cxx_qt_data.qobjects.contains_key(&qobject_ident()));
+        assert!(
+            cxx_qt_data
+                .qobjects
+                .get(&qobject_ident())
+                .unwrap()
+                .has_qobject_macro
+        );
     }
 
     #[test]
@@ -476,7 +476,22 @@ mod tests {
             }
         };
         let result = cxx_qt_data.find_qobject_types(&module.content.unwrap().1);
-        assert!(result.is_err());
+        assert!(result.is_ok());
+        assert_eq!(cxx_qt_data.qobjects.len(), 2);
+        assert!(
+            !cxx_qt_data
+                .qobjects
+                .get(&format_ident!("Other"))
+                .unwrap()
+                .has_qobject_macro
+        );
+        assert!(
+            !cxx_qt_data
+                .qobjects
+                .get(&format_ident!("MyObject"))
+                .unwrap()
+                .has_qobject_macro
+        );
     }
 
     #[test]
