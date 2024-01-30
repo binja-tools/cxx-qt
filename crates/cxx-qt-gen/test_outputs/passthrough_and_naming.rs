@@ -122,7 +122,6 @@ pub mod ffi {
         fn invokable_name(self: Pin<&mut MyObject>);
     }
     unsafe extern "C++" {
-        #[cxx_name = "ready"]
         fn ready(self: Pin<&mut MyObject>);
     }
     unsafe extern "C++" {
@@ -227,7 +226,6 @@ pub mod ffi {
     }
     unsafe extern "C++" {
         #[my_attribute]
-        #[cxx_name = "ready"]
         fn ready(self: Pin<&mut SecondObject>);
     }
     unsafe extern "C++" {

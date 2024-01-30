@@ -5,56 +5,29 @@
 
 use crate::{
     generator::{
-        naming::{method::QMethodName, qobject::QObjectName},
+        naming::method::QMethodName,
         rust::fragment::{GeneratedRustFragment, RustFragmentPair},
     },
     parser::method::ParsedMethod,
+    syntax::attribute::attribute_take_path,
 };
-use proc_macro2::TokenStream;
 use quote::{quote, quote_spanned};
 use syn::{spanned::Spanned, Result};
 
-pub fn generate_rust_methods(
-    invokables: &Vec<ParsedMethod>,
-    qobject_idents: &QObjectName,
-) -> Result<GeneratedRustFragment> {
+pub fn generate_rust_methods(invokables: &Vec<ParsedMethod>) -> Result<GeneratedRustFragment> {
     let mut generated = GeneratedRustFragment::default();
-    let cpp_class_name_rust = &qobject_idents.cpp_class.rust;
 
     for invokable in invokables {
         let idents = QMethodName::from(invokable);
-        let wrapper_ident_cpp = idents.wrapper.cpp.to_string();
-        let invokable_ident_rust = &idents.name.rust;
+        let wrapper_ident_cpp_str = idents.wrapper.cpp.to_string();
 
-        // TODO: once we aren't using qobject::T in the extern "RustQt"
-        // we can just pass through the original ExternFn block and add the attribute?
-        let cpp_struct = if invokable.mutable {
-            quote! { Pin<&mut #cpp_class_name_rust> }
-        } else {
-            quote! { &#cpp_class_name_rust }
+        // Remove any cxx_name attribute on the original method
+        // As we need it to use the wrapper ident
+        let original_method = {
+            let mut original_method = invokable.method.clone();
+            attribute_take_path(&mut original_method.attrs, &["cxx_name"]);
+            original_method
         };
-        let parameter_signatures = if invokable.parameters.is_empty() {
-            quote! { self: #cpp_struct }
-        } else {
-            let parameters = invokable
-                .parameters
-                .iter()
-                .map(|parameter| {
-                    let ident = &parameter.ident;
-                    let ty = &parameter.ty;
-                    quote! { #ident: #ty }
-                })
-                .collect::<Vec<TokenStream>>();
-            quote! { self: #cpp_struct, #(#parameters),* }
-        };
-
-        let return_type = &invokable.method.sig.output;
-
-        let mut unsafe_block = None;
-        let mut unsafe_call = Some(quote! { unsafe });
-        if invokable.safe {
-            std::mem::swap(&mut unsafe_call, &mut unsafe_block);
-        }
 
         let fragment = RustFragmentPair {
             cxx_bridge: vec![quote_spanned! {
@@ -65,8 +38,8 @@ pub fn generate_rust_methods(
                     //
                     // CXX ends up generating the source, then we generate the matching header.
                     #[doc(hidden)]
-                    #[cxx_name = #wrapper_ident_cpp]
-                    #unsafe_call fn #invokable_ident_rust(#parameter_signatures) #return_type;
+                    #[cxx_name = #wrapper_ident_cpp_str]
+                    #original_method
                 }
             }],
             implementation: vec![],
@@ -87,7 +60,6 @@ pub fn generate_rust_methods(
 mod tests {
     use super::*;
 
-    use crate::generator::naming::qobject::tests::create_qobjectname;
     use crate::parser::parameter::ParsedFunctionParameter;
     use crate::tests::assert_tokens_eq;
     use quote::format_ident;
@@ -98,7 +70,10 @@ mod tests {
     fn test_generate_rust_invokables() {
         let invokables = vec![
             ParsedMethod {
-                method: parse_quote! { fn void_invokable(self: &MyObject); },
+                method: parse_quote! {
+                    #[cxx_name = "voidInvokable"]
+                    fn void_invokable(self: &MyObject);
+                },
                 qobject_ident: format_ident!("MyObject"),
                 mutable: false,
                 safe: true,
@@ -143,9 +118,8 @@ mod tests {
                 is_qinvokable: true,
             },
         ];
-        let qobject_idents = create_qobjectname();
 
-        let generated = generate_rust_methods(&invokables, &qobject_idents).unwrap();
+        let generated = generate_rust_methods(&invokables).unwrap();
 
         assert_eq!(generated.cxx_mod_contents.len(), 4);
         assert_eq!(generated.cxx_qt_mod_contents.len(), 0);
@@ -168,7 +142,7 @@ mod tests {
             quote! {
                 extern "Rust" {
                     #[doc(hidden)]
-                    #[cxx_name = "trivialInvokableWrapper"]
+                    #[cxx_name = "trivial_invokableWrapper"]
                     fn trivial_invokable(self: &MyObject, param: i32) -> i32;
                 }
             },
@@ -180,7 +154,7 @@ mod tests {
             quote! {
                 extern "Rust" {
                     #[doc(hidden)]
-                    #[cxx_name = "opaqueInvokableWrapper"]
+                    #[cxx_name = "opaque_invokableWrapper"]
                     fn opaque_invokable(self: Pin<&mut MyObject>, param: &QColor) -> UniquePtr<QColor>;
                 }
             },
@@ -192,7 +166,7 @@ mod tests {
             quote! {
                 extern "Rust" {
                     #[doc(hidden)]
-                    #[cxx_name = "unsafeInvokableWrapper"]
+                    #[cxx_name = "unsafe_invokableWrapper"]
                     unsafe fn unsafe_invokable(self:&MyObject, param: *mut T) -> *mut T;
                 }
             },

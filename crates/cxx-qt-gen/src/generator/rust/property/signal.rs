@@ -14,6 +14,7 @@ pub fn generate(idents: &QPropertyName, qobject_idents: &QObjectName) -> ParsedS
     // We build our signal in the generation phase as we need to use the naming
     // structs to build the signal name
     let cpp_class_rust = &qobject_idents.cpp_class.rust;
+    let notify_cpp_str = idents.notify.cpp.to_string();
     let notify_rust = &idents.notify.rust;
     let notify_cpp_str = &idents.notify.cpp.to_string();
     let method: ForeignItemFn = syn::parse_quote! {

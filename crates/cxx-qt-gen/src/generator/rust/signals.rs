@@ -16,7 +16,7 @@ use crate::{
     syntax::attribute::attribute_find_path,
 };
 use quote::quote;
-use syn::{parse_quote, FnArg, Ident, Result, Type};
+use syn::{parse_quote, token::Colon, BareFnArg, FnArg, Ident, Result, Type};
 
 pub fn generate_rust_signal(
     signal: &ParsedSignal,
@@ -422,6 +422,7 @@ mod tests {
         let qsignal = ParsedSignal {
             method: parse_quote! {
                 #[attribute]
+                #[cxx_name = "dataChanged"]
                 fn data_changed(self: Pin<&mut MyObject>, trivial: i32, opaque: UniquePtr<QColor>);
             },
             qobject_ident: format_ident!("MyObject"),
@@ -590,6 +591,7 @@ mod tests {
     fn test_generate_rust_signal_unsafe() {
         let qsignal = ParsedSignal {
             method: parse_quote! {
+                #[cxx_name = "unsafeSignal"]
                 unsafe fn unsafe_signal(self: Pin<&mut MyObject>, param: *mut T);
             },
             qobject_ident: format_ident!("MyObject"),
@@ -751,6 +753,7 @@ mod tests {
         let qsignal = ParsedSignal {
             method: parse_quote! {
                 #[inherit]
+                #[cxx_name = "baseName"]
                 fn existing_signal(self: Pin<&mut MyObject>, );
             },
             qobject_ident: format_ident!("MyObject"),

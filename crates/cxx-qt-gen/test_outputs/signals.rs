@@ -101,10 +101,10 @@ mod ffi {
         fn call_MyObject_signal_handler_dataChanged(
             handler: &mut MyObjectCxxQtSignalHandlerdataChanged,
             self_value: Pin<&mut MyObject>,
-            first: i32,
-            second: UniquePtr<Opaque>,
-            third: QPoint,
-            fourth: &QPoint,
+             i32,
+             UniquePtr<Opaque>,
+             QPoint,
+             &QPoint
         );
     }
     unsafe extern "C++" {
@@ -140,10 +140,10 @@ mod ffi {
         fn call_MyObject_signal_handler_newData(
             handler: &mut MyObjectCxxQtSignalHandlernewData,
             self_value: Pin<&mut MyObject>,
-            first: i32,
-            second: UniquePtr<Opaque>,
-            third: QPoint,
-            fourth: &'a QPoint,
+             i32,
+             UniquePtr<Opaque>,
+             QPoint,
+             &'a QPoint
         );
     }
     extern "Rust" {
@@ -213,7 +213,7 @@ impl ffi::MyObject {
 }
 impl ffi::MyObject {
     #[doc = "Connect the given function pointer to the signal "]
-    #[doc = "ready"]
+    #[doc = "dataReady"]
     #[doc = ", so that when the signal is emitted the function pointer is executed."]
     #[doc = "\n"]
     #[doc = "Note that this method uses a AutoConnection connection type."]

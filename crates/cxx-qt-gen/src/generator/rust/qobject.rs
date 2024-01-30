@@ -47,14 +47,8 @@ impl GeneratedRustFragment {
             cxx_mappings,
             module_ident,
         )?);
-        generated.append(&mut generate_rust_methods(
-            &qobject.methods,
-            &qobject_idents,
-        )?);
-        generated.append(&mut inherit::generate(
-            &qobject_idents,
-            &qobject.inherited_methods,
-        )?);
+        generated.append(&mut generate_rust_methods(&qobject.methods)?);
+        generated.append(&mut inherit::generate(&qobject.inherited_methods)?);
         generated.append(&mut generate_rust_signals(
             &qobject.signals,
             &qobject_idents,
