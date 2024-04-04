@@ -1,12 +1,12 @@
+use quote::format_ident;
+use syn::{Ident, Result};
+
+use crate::{generator::naming::CombinedIdent, naming::TypeNames};
 // SPDX-FileCopyrightText: 2022 Klarälvdalens Datakonsult AB, a KDAB Group company <info@kdab.com>
 // SPDX-FileContributor: Andrew Hayzen <andrew.hayzen@kdab.com>
 //
 // SPDX-License-Identifier: MIT OR Apache-2.0
 use crate::parser::signals::ParsedSignal;
-use crate::{generator::naming::CombinedIdent, naming::TypeNames};
-use convert_case::{Case, Casing};
-use quote::format_ident;
-use syn::{Ident, Result};
 
 /// Names for parts of a Q_SIGNAL
 pub struct QSignalName {
@@ -26,7 +26,7 @@ impl From<&ParsedSignal> for QSignalName {
 }
 
 fn on_from_signal(ident: &Ident) -> Ident {
-    format_ident!("on_{}", ident.to_string().to_case(Case::Snake))
+    format_ident!("on_{}", ident.to_string())
 }
 
 impl CombinedIdent {
@@ -34,8 +34,8 @@ impl CombinedIdent {
         Self {
             // Use signalConnect instead of onSignal here so that we don't
             // create a C++ name that is similar to the QML naming scheme for signals
-            cpp: format_ident!("{}Connect", ident.cpp.to_string().to_case(Case::Camel)),
-            rust: format_ident!("connect_{}", ident.rust.to_string().to_case(Case::Snake)),
+            cpp: format_ident!("{}Connect", ident.cpp.to_string()),
+            rust: format_ident!("connect_{}", ident.rust.to_string()),
         }
     }
 }
@@ -100,9 +100,9 @@ impl QSignalHelperName {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     use syn::parse_quote;
+
+    use super::*;
 
     #[test]
     fn test_parsed_signal() {

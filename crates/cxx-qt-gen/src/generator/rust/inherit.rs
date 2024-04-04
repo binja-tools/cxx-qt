@@ -3,54 +3,43 @@
 
 // SPDX-License-Identifier: MIT OR Apache-2.0
 
+use quote::{quote, quote_spanned};
+use syn::{Item, Result, spanned::Spanned};
+
 use crate::{
-    generator::{naming::qobject::QObjectName, rust::fragment::GeneratedRustFragment},
+    generator::rust::fragment::GeneratedRustFragment,
     parser::inherit::ParsedInheritedMethod,
 };
-use proc_macro2::TokenStream;
-use quote::{quote, quote_spanned};
-use syn::{spanned::Spanned, Item, Result};
+use crate::syntax::attribute::attribute_take_path;
 
 pub fn generate(
-    qobject_ident: &QObjectName,
     methods: &[ParsedInheritedMethod],
 ) -> Result<GeneratedRustFragment> {
     let mut blocks = GeneratedRustFragment::default();
-    let qobject_name = &qobject_ident.cpp_class.rust;
 
     let mut bridges = methods
         .iter()
         .map(|method| {
-            let parameters = method
-                .parameters
-                .iter()
-                .map(|parameter| {
-                    let ident = &parameter.ident;
-                    let ty = &parameter.ty;
-                    quote! { #ident: #ty }
-                })
-                .collect::<Vec<TokenStream>>();
-            let ident = &method.method.sig.ident;
-            let cxx_name_string = &method.wrapper_ident().to_string();
-            let self_param = if method.mutable {
-                quote! { self: Pin<&mut #qobject_name> }
-            } else {
-                quote! { self: &#qobject_name }
+            let wrapper_ident_str = method.wrapper_ident().to_string();
+
+            // Remove any cxx_name attribute on the original method
+            // As we need it to use the wrapper ident
+            let original_method = {
+                let mut original_method = method.method.clone();
+                attribute_take_path(&mut original_method.attrs, &["cxx_name"]);
+                original_method
             };
-            let return_type = &method.method.sig.output;
 
             let mut unsafe_block = None;
             let mut unsafe_call = Some(quote! { unsafe });
             if method.safe {
                 std::mem::swap(&mut unsafe_call, &mut unsafe_block);
             }
-            let attrs = &method.method.attrs;
             syn::parse2(quote_spanned! {
                 method.method.span() =>
                 #unsafe_block extern "C++" {
-                    #(#attrs)*
-                    #[cxx_name = #cxx_name_string]
-                    #unsafe_call fn #ident(#self_param, #(#parameters),*) #return_type;
+                    #[cxx_name = #wrapper_ident_str]
+                    #original_method
                 }
             })
         })
@@ -62,19 +51,21 @@ pub fn generate(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use syn::{ForeignItemFn, parse_quote};
+
     use crate::{
-        generator::naming::qobject::tests::create_qobjectname, syntax::safety::Safety,
+        syntax::safety::Safety,
         tests::assert_tokens_eq,
     };
-    use syn::{parse_quote, ForeignItemFn};
+
+    use super::*;
 
     fn generate_from_foreign(
         method: ForeignItemFn,
         safety: Safety,
     ) -> Result<GeneratedRustFragment> {
         let inherited_methods = vec![ParsedInheritedMethod::parse(method, safety).unwrap()];
-        generate(&create_qobjectname(), &inherited_methods)
+        generate(&inherited_methods)
     }
 
     #[test]
@@ -140,11 +131,10 @@ mod tests {
 
         assert_tokens_eq(
             &generated.cxx_mod_contents[0],
-            // TODO: Maybe remove the trailing comma after self?
             quote! {
                 extern "C++" {
                     #[cxx_name = "testCxxQtInherit"]
-                    unsafe fn test(self: &MyObject,);
+                    unsafe fn test(self: &MyObject);
                 }
             },
         );

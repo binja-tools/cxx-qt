@@ -3,15 +3,16 @@
 //
 // SPDX-License-Identifier: MIT OR Apache-2.0
 
+use quote::format_ident;
+use syn::{Error, ForeignItemFn, Ident, Result, spanned::Spanned};
+
 use crate::{
     generator::naming::CombinedIdent,
     parser::parameter::ParsedFunctionParameter,
     syntax::{
-        attribute::attribute_take_path, expr::expr_to_string, foreignmod, safety::Safety, types,
+        foreignmod, safety::Safety, types,
     },
 };
-use quote::format_ident;
-use syn::{spanned::Spanned, Error, ForeignItemFn, Ident, Result};
 
 /// Describes a method found in an extern "RustQt" with #[inherit]
 pub struct ParsedInheritedMethod {
@@ -30,7 +31,7 @@ pub struct ParsedInheritedMethod {
 }
 
 impl ParsedInheritedMethod {
-    pub fn parse(mut method: ForeignItemFn, safety: Safety) -> Result<Self> {
+    pub fn parse(method: ForeignItemFn, safety: Safety) -> Result<Self> {
         if safety == Safety::Unsafe && method.sig.unsafety.is_none() {
             return Err(Error::new(
                 method.span(),
@@ -44,14 +45,7 @@ impl ParsedInheritedMethod {
 
         let parameters = ParsedFunctionParameter::parse_all_ignoring_receiver(&method.sig)?;
 
-        let mut ident = CombinedIdent::from_rust_function(method.sig.ident.clone());
-
-        if let Some(attr) = attribute_take_path(&mut method.attrs, &["cxx_name"]) {
-            ident.cpp = format_ident!(
-                "{}",
-                expr_to_string(&attr.meta.require_name_value()?.value)?
-            );
-        }
+        let ident = CombinedIdent::from_rust_function(&method.attrs, &method.sig.ident.clone());
 
         let safe = method.sig.unsafety.is_none();
 
@@ -73,9 +67,9 @@ impl ParsedInheritedMethod {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     use syn::parse_quote;
+
+    use super::*;
 
     fn assert_parse_error(function: ForeignItemFn) {
         let result = ParsedInheritedMethod::parse(function, Safety::Safe);
