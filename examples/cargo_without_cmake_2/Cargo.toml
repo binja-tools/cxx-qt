@@ -1,0 +1,37 @@
+# SPDX-FileCopyrightText: 2022 Klarälvdalens Datakonsult AB, a KDAB Group company <info@kdab.com>
+# SPDX-FileContributor: Andrew Hayzen <andrew.hayzen@kdab.com>
+# SPDX-FileContributor: Gerhard de Clercq <gerhard.declercq@kdab.com>
+#
+# SPDX-License-Identifier: MIT OR Apache-2.0
+
+# ANCHOR: book_cargo_toml_no_cmake
+[package]
+name = "qml-minimal-no-cmake-2"
+version = "0.1.0"
+authors = [
+  "Andrew Hayzen <andrew.hayzen@kdab.com>",
+  "Be Wilson <be.wilson@kdab.com>",
+  "Gerhard de Clercq <gerhard.declercq@kdab.com>",
+  "Leon Matthes <leon.matthes@kdab.com>"
+]
+edition = "2021"
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+# ANCHOR_END: book_cargo_toml_no_cmake
+
+# Use `cxx = "1.0.95"` here instead!
+cxx.workspace = true
+# Use `cxx-qt = "0.6"` here instead!
+cxx-qt.workspace = true
+# Use `cxx-qt-lib = "0.6"` here instead!
+cxx-qt-lib.workspace = true
+cxx-qt-lib-extras.workspace = true
+
+[build-dependencies]
+# Use `cxx-qt-build = "0.6"` here instead!
+# The link_qt_object_files feature is required for statically linking Qt 6.
+cxx-qt-build = { workspace = true, features = [ "link_qt_object_files" ] }
+# Use `cxx-qt-lib-headers = "0.6"` here instead!
+cxx-qt-lib-headers.workspace = true
+cxx-qt-lib-extras-headers.workspace = true
